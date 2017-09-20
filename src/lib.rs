@@ -1,6 +1,8 @@
 /*!
 Is there an executable file at the given path?
 
+[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](http://meritbadge.herokuapp.com/is_executable) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![Build Status](https://travis-ci.org/fitzgen/is_executable.png?branch=master)](https://travis-ci.org/fitzgen/is_executable)
+
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not
 executable, then `false` is returned. When there is a file and the file is

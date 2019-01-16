@@ -52,6 +52,9 @@ The API comes in two flavors:
     ```
  */
 
+#[cfg(target_os = "windows")]
+extern crate winapi;
+
 use std::path::Path;
 
 /// Returns `true` if there is a file at the given path and it is
@@ -107,7 +110,11 @@ mod windows {
 
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
-            let windows_string = self.encode_wide().chain(Some(0)).collect::<Vec<whcar_t>>();
+            let windows_string = self
+                .as_os_str()
+                .encode_wide()
+                .chain(Some(0))
+                .collect::<Vec<wchar_t>>();
             let windows_string_ptr = windows_string.as_ptr();
 
             let mut binary_type: c_ulong = 42;
@@ -118,7 +125,8 @@ mod windows {
                 return false;
             }
             if ret != 0 {
-                match unsafe { *binary_type_ptr } {
+                let binary_type = unsafe { *binary_type_ptr };
+                match binary_type {
                     0   // A 32-bit Windows-based application
                     | 1 // An MS-DOS-based application
                     | 2 // A 16-bit Windows-based application

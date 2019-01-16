@@ -2,13 +2,15 @@ extern crate diff;
 extern crate is_executable;
 
 use is_executable::is_executable;
-use std::env;
-use std::fs::File;
-use std::io::Read;
-use std::process::Command;
 
+#[cfg(unix)]
 #[test]
 fn cargo_readme_up_to_date() {
+    use std::env;
+    use std::fs::File;
+    use std::io::Read;
+    use std::process::Command;
+
     if env::var("CI").is_ok() {
         return;
     }
@@ -47,9 +49,16 @@ fn cargo_readme_up_to_date() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn executable() {
     assert!(is_executable("./tests/i_am_executable"));
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn executable() {
+    assert!(is_executable("C:\\Windows\\explorer.exe"));
 }
 
 #[test]

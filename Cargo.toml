@@ -13,7 +13,7 @@ version = "0.1.0"
 repository = "fitzgen/is_executable"
 
 [dependencies]
-winapi = { version = "0.3", features = ["winuser"] }
+winapi = { version = "0.3", features = ["winbase"] }
 
 [dev-dependencies]
 diff = "0.1.10"

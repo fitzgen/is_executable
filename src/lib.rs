@@ -6,68 +6,65 @@ Is there an executable file at the given path?
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not
 executable, then `false` is returned. When there is a file and the file is
-executable, then `true` is returend.
+executable, then `true` is returned.
 
-Answering this question is OS specific: some operating systems (Windows) do not
-distinguish between executable and non-executable file permissions. On such
-OSes, if there is a file at the given path, then `true` is returned.
+This crate works on both unix-based operating systems (mac, linux, freebsd, etc.) and Windows.
 
 The API comes in two flavors:
 
-1. An extension trait to add an `is_executable` method on `std::path::Path` and
-   `std::fs::Permissions`:
+1. An extension trait to add an `is_executable` method on `std::path::Path`:
 
-   ```rust
-   use is_executable::IsExecutable;
-   use std::fs;
-   use std::path::Path;
+    ```rust
+    use std::path::Path;
 
-   let path = Path::new("some/path/to/a/file");
+    use is_executable::IsExecutable;
 
-   // Determine if `path` is executable.
-   if path.is_executable() {
-       println!("The path is executable!");
-   } else {
-       println!("The path is _not_ executable!");
-   }
+    fn main() {
+        let path = Path::new("some/path/to/a/file");
 
-   // Determine if some `std::fs::Metadata`'s `std::fs::Permissions` are
-   // executable.
-   # let _foo = || -> ::std::io::Result<()> {
-   if fs::metadata("some/path")?.permissions().is_executable() {
-       println!("The permissions are executable!");
-   } else {
-       println!("The permissions are _not_ executable!");
-   }
-   # Ok(())
-   # };
-   ```
+        // Determine if `path` is executable.
+        if path.is_executable() {
+            println!("The path is executable!");
+        } else {
+            println!("The path is _not_ executable!");
+        }
+    }
+    ```
 
 2. For convenience, a standalone `is_executable` function, which takes any
 `AsRef<Path>`:
 
-   ```rust
-   use is_executable::is_executable;
-   use std::path::Path;
+    ```rust
+    use std::path::Path;
 
-   let path = Path::new("some/path/to/a/file");
+    use is_executable::is_executable;
 
-   if is_executable(&path) {
-       println!("The path is executable!");
-   } else {
-       println!("The path is _not_ executable!");
-   }
-   ```
+    fn main() {
+        let path = Path::new("some/path/to/a/file");
+
+        // Determine if `path` is executable.
+        if is_executable(&path) {
+            println!("The path is executable!");
+        } else {
+            println!("The path is _not_ executable!");
+        }
+    }
+    ```
  */
 
-use std::fs;
+#[cfg(target_os = "windows")]
+extern crate winapi;
+
 use std::path::Path;
 
 /// Returns `true` if there is a file at the given path and it is
 /// executable. Returns `false` otherwise.
 ///
 /// See the module documentation for details.
-pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+pub fn is_executable<P>(path: P) -> bool
+where
+    P: AsRef<Path>,
+{
     path.as_ref().is_executable()
 }
 
@@ -82,23 +79,67 @@ pub trait IsExecutable {
     fn is_executable(&self) -> bool;
 }
 
-impl IsExecutable for Path {
-    fn is_executable(&self) -> bool {
-        fs::metadata(self)
-            .ok()
-            .map_or(false, |meta| meta.permissions().is_executable())
+#[cfg(unix)]
+mod unix {
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::Path;
+
+    use super::IsExecutable;
+
+    impl IsExecutable for Path {
+        fn is_executable(&self) -> bool {
+            let metadata = match self.metadata() {
+                Ok(metadata) => metadata,
+                Err(_) => return false,
+            };
+            let permissions = metadata.permissions();
+            permissions.mode() & 0o111 != 0
+        }
     }
 }
 
-impl IsExecutable for fs::Permissions {
-    #[cfg(unix)]
-    fn is_executable(&self) -> bool {
-        use std::os::unix::fs::PermissionsExt;
-        self.mode() & 0o111 != 0
-    }
+#[cfg(target_os = "windows")]
+mod windows {
+    use std::os::windows::ffi::OsStrExt;
+    use std::path::Path;
 
-    #[cfg(not(unix))]
-    fn is_executable(&self) -> bool {
-        true
+    use winapi::ctypes::{c_ulong, wchar_t};
+    use winapi::um::winbase::GetBinaryTypeW;
+
+    use super::IsExecutable;
+
+    impl IsExecutable for Path {
+        fn is_executable(&self) -> bool {
+            let windows_string = self
+                .as_os_str()
+                .encode_wide()
+                .chain(Some(0))
+                .collect::<Vec<wchar_t>>();
+            let windows_string_ptr = windows_string.as_ptr();
+
+            let mut binary_type: c_ulong = 42;
+            let binary_type_ptr = &mut binary_type as *mut c_ulong;
+
+            let ret = unsafe { GetBinaryTypeW(windows_string_ptr, binary_type_ptr) };
+            if binary_type_ptr.is_null() {
+                return false;
+            }
+            if ret != 0 {
+                let binary_type = unsafe { *binary_type_ptr };
+                match binary_type {
+                    0   // A 32-bit Windows-based application
+                    | 1 // An MS-DOS-based application
+                    | 2 // A 16-bit Windows-based application
+                    | 3 // A PIF file that executes an MS-DOS-based application
+                    | 4 // A POSIX – based application
+                    | 5 // A 16-bit OS/2-based application
+                    | 6 // A 64-bit Windows-based application
+                    => return true,
+                    _ => (),
+                }
+            }
+
+            false
+        }
     }
 }

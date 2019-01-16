@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/fitzgen/is_executable.svg?branch=master)](https://travis-ci.org/fitzgen/is_executable)
+
 # is_executable
 
 Is there an executable file at the given path?
@@ -7,57 +9,49 @@ Is there an executable file at the given path?
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not
 executable, then `false` is returned. When there is a file and the file is
-executable, then `true` is returend.
+executable, then `true` is returned.
 
-Answering this question is OS specific: some operating systems (Windows) do not
-distinguish between executable and non-executable file permissions. On such
-OSes, if there is a file at the given path, then `true` is returned.
+This crate works on both unix-based operating systems (mac, linux, freebsd, etc.) and Windows.
 
 The API comes in two flavors:
 
-1. An extension trait to add an `is_executable` method on `std::path::Path` and
-   `std::fs::Permissions`:
+1. An extension trait to add an `is_executable` method on `std::path::Path`:
 
-   ```rust
-   use is_executable::IsExecutable;
-   use std::fs;
-   use std::path::Path;
+    ```rust
+    use std::path::Path;
 
-   let path = Path::new("some/path/to/a/file");
+    use is_executable::IsExecutable;
 
-   // Determine if `path` is executable.
-   if path.is_executable() {
-       println!("The path is executable!");
-   } else {
-       println!("The path is _not_ executable!");
-   }
+    fn main() {
+        let path = Path::new("some/path/to/a/file");
 
-   // Determine if some `std::fs::Metadata`'s `std::fs::Permissions` are
-   // executable.
-   # let _foo = || -> ::std::io::Result<()> {
-   if fs::metadata("some/path")?.permissions().is_executable() {
-       println!("The permissions are executable!");
-   } else {
-       println!("The permissions are _not_ executable!");
-   }
-   # Ok(())
-   # };
-   ```
+        // Determine if `path` is executable.
+        if path.is_executable() {
+            println!("The path is executable!");
+        } else {
+            println!("The path is _not_ executable!");
+        }
+    }
+    ```
 
 2. For convenience, a standalone `is_executable` function, which takes any
 `AsRef<Path>`:
 
-   ```rust
-   use is_executable::is_executable;
-   use std::path::Path;
+    ```rust
+    use std::path::Path;
 
-   let path = Path::new("some/path/to/a/file");
+    use is_executable::is_executable;
 
-   if is_executable(&path) {
-       println!("The path is executable!");
-   } else {
-       println!("The path is _not_ executable!");
-   }
-   ```
+    fn main() {
+        let path = Path::new("some/path/to/a/file");
+
+        // Determine if `path` is executable.
+        if is_executable(&path) {
+            println!("The path is executable!");
+        } else {
+            println!("The path is _not_ executable!");
+        }
+    }
+    ```
 
 License: Apache-2.0/MIT

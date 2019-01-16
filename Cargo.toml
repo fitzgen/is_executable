@@ -12,5 +12,8 @@ version = "0.1.0"
 [badges.travis-ci]
 repository = "fitzgen/is_executable"
 
+[dependencies]
+winapi = { version = "0.3", features = ["winuser"] }
+
 [dev-dependencies]
 diff = "0.1.10"

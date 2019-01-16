@@ -54,17 +54,10 @@ fn executable() {
 
 #[test]
 fn not_executable() {
-    assert_eq!(
-        is_executable("./tests/i_am_not_executable"),
-        if cfg!(unix) {
-            false
-        } else {
-            true
-        }
-    );
+    assert!(!is_executable("./tests/i_am_not_executable"));
 }
 
 #[test]
 fn non_existant() {
-    assert_eq!(false, is_executable("./tests/this-file-does-not-exist"));
+    assert!(!is_executable("./tests/this-file-does-not-exist"));
 }

@@ -45,6 +45,7 @@ The API comes in two flavors:
     fn main() {
         let path = Path::new("some/path/to/a/file");
 
+        // Determine if `path` is executable.
         if is_executable(&path) {
             println!("The path is executable!");
         } else {

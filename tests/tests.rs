@@ -56,6 +56,16 @@ mod unix {
     fn executable() {
         assert!(is_executable("./tests/i_am_executable"));
     }
+
+    #[test]
+    fn executable_symlink() {
+        assert!(is_executable("./tests/i_am_executable_and_symlink"));
+    }
+
+    #[test]
+    fn not_executable_symlink() {
+        assert!(!is_executable("./tests/i_am_not_executable_and_symlink"));
+    }
 }
 
 #[cfg(target_os = "windows")]

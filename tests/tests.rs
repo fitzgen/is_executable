@@ -66,6 +66,11 @@ mod unix {
     fn not_executable_symlink() {
         assert!(!is_executable("./tests/i_am_not_executable_and_symlink"));
     }
+
+    #[test]
+    fn not_executable_directory() {
+        assert!(!is_executable("."));
+    }
 }
 
 #[cfg(target_os = "windows")]

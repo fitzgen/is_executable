@@ -93,7 +93,7 @@ mod unix {
                 Err(_) => return false,
             };
             let permissions = metadata.permissions();
-            permissions.mode() & 0o111 != 0
+            metadata.is_file() && permissions.mode() & 0o111 != 0
         }
     }
 }

@@ -82,6 +82,11 @@ mod windows {
         assert!(is_executable("C:\\Windows\\explorer.exe"));
     }
 
+    #[test]
+    fn by_extension() {
+        assert!(is_executable("./tests/i_am_executable_on_windows.bat"));
+    }
+
 }
 
 #[test]

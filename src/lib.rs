@@ -110,6 +110,29 @@ mod windows {
 
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
+            // Check using file extension
+            if let Some(pathext) = std::env::var_os("PATHEXT") {
+                if let Some(extension) = self.extension() {
+                    // Restructure pathext as Vec<String>
+                    // https://github.com/nushell/nushell/blob/93e8f6c05e1e1187d5b674d6b633deb839c84899/crates/nu-cli/src/completion/command.rs#L64-L74
+                    let pathext = pathext
+                        .to_string_lossy()
+                        .split(';')
+                        // Filter out empty tokens and ';' at the end
+                        .filter(|f| f.len() > 1)
+                        // Cut off the leading '.' character
+                        .map(|ext| ext[1..].to_string())
+                        .collect::<Vec<_>>();
+                    let extension = extension.to_string_lossy();
+
+                    return pathext
+                        .iter()
+                        .any(|ext| extension.eq_ignore_ascii_case(ext));
+                }
+            }
+
+            // Check using file properties
+            // This code is only reached if there is no file extension or retrieving PATHEXT fails
             let windows_string = self
                 .as_os_str()
                 .encode_wide()

@@ -55,6 +55,9 @@ The API comes in two flavors:
 #[cfg(target_os = "windows")]
 extern crate winapi;
 
+use std::io;
+use std::env;
+use std::os;
 use std::path::Path;
 
 /// Returns `true` if there is a file at the given path and it is
@@ -68,6 +71,8 @@ where
     path.as_ref().is_executable()
 }
 
+
+
 /// An extension trait for `std::fs::Path` providing an `is_executable` method.
 ///
 /// See the module documentation for examples.
@@ -79,12 +84,44 @@ pub trait IsExecutable {
     fn is_executable(&self) -> bool;
 }
 
+/// Returns `Result<Path, io::Error>` if there is a file at the given path and the
+/// current run-level is permitted to execute it.
+///
+/// See the module documentation for details.
+pub fn is_permitted<P>(path: P) -> io::Result<Path>
+where
+    P: AsRef<Path>
+{
+    path.as_ref().is_permitted()
+}
+
+/// An extension trait for `std::fs::Path` providing an `is_permitted` method.
+///
+/// See the module documentation for examples.
+pub trait IsPermitted {
+    /// Returns `Result<Path, io::Error>` that describes if a particular file
+    /// exists at the given path and the run-level of the current context meets
+    /// the appropriate user, group, admin, root/system-level membership.
+    ///
+    /// Note: *this does not inspect whether the `Path` is executable.*
+    fn is_permitted(&self) -> io::Result<Path>;
+}
+
 #[cfg(unix)]
 mod unix {
-    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::MetadataExt;
+    use users::{
+        Group, Groups,
+        User, Users,
+        group_access_list,
+        get_effective_uid,
+        get_group_by_gid
+    };
     use std::path::Path;
-
+    use std::fs;
+    use std::io;
     use super::IsExecutable;
+    use super::IsPermitted;
 
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
@@ -96,6 +133,47 @@ mod unix {
             metadata.is_file() && permissions.mode() & 0o111 != 0
         }
     }
+
+    macro_rules! vecomp {
+    [$expr:expr; for $pat:pat in $iter:expr $(; if $cond:expr )?] => {
+        IntoIterator::into_iter($iter)
+            $(
+                .filter(|$pat| $cond)
+            )?
+            .map(|$pat| $expr)
+            .collect::<Vec<_>>()
+        }
+    }
+
+    impl IsPermitted for Path {
+        fn is_permitted(&self) -> io::Result<Path> {
+            if let Ok(metadata) = self.borrow().metadata() {
+                /** If the metadata's mode's octal bits match any
+                 * one of the combinations listed below, then we
+                 * have sufficient reasons to believe it's executable
+                 */
+                match metadata.borrow().is_file() {
+                    true => {
+                        /** Could this target path be ran with executable permissions
+                         *  by this runtime's run-level user?
+                         *
+                         *  Let's find out.
+                         */
+                        
+                         },
+                    false => {
+                        io::Error::new(io::ErrorKind::NotFound,
+                            format!("{:?} was not readable or present on the local filesystem",
+                                self.to_string()))
+                    }
+                }
+            } else {
+                io::Error::last_os_error()
+            }
+        }
+    }
+
+    impl From<io::Result<Path>> for AsRef<Path>
 }
 
 #[cfg(target_os = "windows")]

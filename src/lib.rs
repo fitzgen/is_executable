@@ -88,7 +88,7 @@ pub trait IsExecutable {
 /// current run-level is permitted to execute it.
 ///
 /// See the module documentation for details.
-pub fn is_permitted<P>(path: P) -> io::Result<Path>
+pub fn is_permitted<P>(path: P) -> io::Result<Box<P>>
 where
     P: AsRef<Path>
 {
@@ -104,18 +104,17 @@ pub trait IsPermitted {
     /// the appropriate user, group, admin, root/system-level membership.
     ///
     /// Note: *this does not inspect whether the `Path` is executable.*
-    fn is_permitted(&self) -> io::Result<Path>;
+    fn is_permitted(&self) -> io::Result<Box<Path>>;
 }
 
 #[cfg(unix)]
 mod unix {
     use std::os::unix::fs::MetadataExt;
+    extern crate users;
     use users::{
-        Group, Groups,
-        User, Users,
         group_access_list,
         get_effective_uid,
-        get_group_by_gid
+        //get_effective_grouplist,
     };
     use std::path::Path;
     use std::fs;
@@ -146,20 +145,42 @@ mod unix {
     }
 
     impl IsPermitted for Path {
-        fn is_permitted(&self) -> io::Result<Path> {
+        fn is_permitted(&self) -> io::Result<Box<Path>> {
             if let Ok(metadata) = self.borrow().metadata() {
-                /** If the metadata's mode's octal bits match any
-                 * one of the combinations listed below, then we
-                 * have sufficient reasons to believe it's executable
-                 */
+                /// If the metadata's mode's octal bits match any
+                /// one of the combinations listed below, then we
+                /// have sufficient reasons to believe it's executable.
                 match metadata.borrow().is_file() {
                     true => {
-                        /** Could this target path be ran with executable permissions
-                         *  by this runtime's run-level user?
-                         *
-                         *  Let's find out.
-                         */
-                        
+                        /// Could this target path be ran with executable permissions
+                        ///  by this runtime's run-level user?
+                        ///
+                        ///  Suppose the GID for the file in question is (Gm).
+                        ///  Assuming that the set of all groups shared by the user, 
+                        ///  (G* := { Gn, Gn+1, Gn+2, ...}), is a superset of the set whose only
+                        ///  entry is the user's GID, (G_user := G* - Gn).
+                        ///  Then, Ǝ a possibility some arbitary GID, like (Gn+14) for example,
+                        ///  happens to be the GID belonging to group on that file.
+                        ///  
+                        ///  In other words, we'll collect each of the (G*) entries
+                        ///  and see if there's a match. Otherwise, we check who owns the file and
+                        ///  perform a similar check.
+                        if let Some(_arbitrary_gid_matched) = 
+                                vecomp![
+                                    fs::metadata(self.borrow().to_str().unwrap()).gid()? == Ok(gid);
+                                    for gid in group_access_list()
+                                ].into_iter().take_while(|b| b == false).last() { 
+                            Ok(Box::new(Self))
+                        } else if fs::metadata(self.borrow().to_str().unwrap()).uid()? == Ok(get_effective_uid() as u32) {
+                            /// (It's *really* unusual for this case to occur) 
+                            /// If a terminal operator or script executed 
+                            /// `chmod {1,3,5,7}{2,4,6}{2,4,6} $FILE` (i.e. chmod 720 ~/.bashrc), 
+                            /// the corner case of having owner-exclusive execution rights 
+                            /// without identical group executable permissions is a thing that can happen.
+                            Ok(Box::new(Self))
+                        } else {
+                            io::Error::new(io::ErrorKind::PermissionDenied, "Access Denied")
+                        }
                          },
                     false => {
                         io::Error::new(io::ErrorKind::NotFound,
@@ -168,12 +189,10 @@ mod unix {
                     }
                 }
             } else {
-                io::Error::last_os_error()
+                io::Error::new(io::Error::last_os_error()
             }
         }
     }
-
-    impl From<io::Result<Path>> for AsRef<Path>
 }
 
 #[cfg(target_os = "windows")]

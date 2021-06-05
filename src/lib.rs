@@ -58,8 +58,8 @@ extern crate winapi;
 use std::io;
 use std::env;
 use std::os;
-use std::path::Path;
-
+use std::path::{Path, PathBuf};
+use std::os::unix::fs::PermissionsExt;
 /// Returns `true` if there is a file at the given path and it is
 /// executable. Returns `false` otherwise.
 ///
@@ -88,7 +88,7 @@ pub trait IsExecutable {
 /// current run-level is permitted to execute it.
 ///
 /// See the module documentation for details.
-pub fn is_permitted<P>(path: P) -> io::Result<Box<P>>
+pub fn is_permitted<P>(path: P) -> Option<::std::path::PathBuf> //io::Result<Box<P>>
 where
     P: AsRef<Path>
 {
@@ -104,18 +104,21 @@ pub trait IsPermitted {
     /// the appropriate user, group, admin, root/system-level membership.
     ///
     /// Note: *this does not inspect whether the `Path` is executable.*
-    fn is_permitted(&self) -> io::Result<Box<Path>>;
+    fn is_permitted(&self) -> Option<::std::path::PathBuf>;
 }
 
 #[cfg(unix)]
 mod unix {
     use std::os::unix::fs::MetadataExt;
+    use std::os::unix::fs::PermissionsExt;
+
     extern crate users;
-    use users::{
+    use self::users::{
         group_access_list,
         get_effective_uid,
         //get_effective_grouplist,
     };
+    use std::cell::RefCell;
     use std::path::Path;
     use std::fs;
     use std::io;
@@ -132,7 +135,7 @@ mod unix {
             metadata.is_file() && permissions.mode() & 0o111 != 0
         }
     }
-
+    /*
     macro_rules! vecomp {
     [$expr:expr; for $pat:pat in $iter:expr $(; if $cond:expr )?] => {
         IntoIterator::into_iter($iter)
@@ -143,10 +146,36 @@ mod unix {
             .collect::<Vec<_>>()
         }
     }
-
+    */
     impl IsPermitted for Path {
-        fn is_permitted(&self) -> io::Result<Box<Path>> {
-            if let Ok(metadata) = self.borrow().metadata() {
+        fn is_permitted(&self /* : &Path */) -> Option<::std::path::PathBuf> {
+            // Do an interiorly-mutable borrow on `self`
+            // to give us access to `PathBuf`
+
+            // let mut refc_path: RefCell<Path>  = RefCell::new(*self);
+            let (metadata, buf)  = match self.metadata() {
+                Ok(md) => { (Some(md), self.to_path_buf()) },
+                Err(_) => { (None,     self.to_path_buf()) }
+            };
+            match metadata.unwrap().is_file() {
+                true => { 
+                    let file_gid: u32 = fs::metadata(buf.to_str().unwrap()).unwrap().gid();
+                    if let Some(_gid_match) = group_access_list() /* := Result<Vec<Group>> */
+                                              .unwrap()
+                                              .into_iter()
+                                              .take_while(|grp| file_gid != grp.gid())
+                                              .last() {
+                        return Some(buf)
+                    }
+                    else {
+                        todo!()
+                    }
+                }
+                false => { None }
+           }
+        }
+            /*
+            if let Ok(metadata) = path_buf.borrow_mut().metadata() {
                 /// If the metadata's mode's octal bits match any
                 /// one of the combinations listed below, then we
                 /// have sufficient reasons to believe it's executable.
@@ -167,7 +196,10 @@ mod unix {
                         ///  perform a similar check.
                         if let Some(_arbitrary_gid_matched) = 
                                 vecomp![
-                                    fs::metadata(self.borrow().to_str().unwrap()).gid()? == Ok(gid);
+                                    fs::metadata(
+                                        self.borrow()
+                                            .to_str()
+                                            .unwrap()).gid() == Ok(gid);
                                     for gid in group_access_list()
                                 ].into_iter().take_while(|b| b == false).last() { 
                             Ok(Box::new(Self))
@@ -191,7 +223,7 @@ mod unix {
             } else {
                 io::Error::new(io::Error::last_os_error()
             }
-        }
+            */
     }
 }
 

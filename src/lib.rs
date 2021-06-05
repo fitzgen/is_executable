@@ -56,9 +56,7 @@ The API comes in two flavors:
 extern crate winapi;
 
 use std::io;
-use std::env;
-use std::os;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::os::unix::fs::PermissionsExt;
 /// Returns `true` if there is a file at the given path and it is
 /// executable. Returns `false` otherwise.
@@ -88,7 +86,7 @@ pub trait IsExecutable {
 /// current run-level is permitted to execute it.
 ///
 /// See the module documentation for details.
-pub fn is_permitted<P>(path: P) -> Option<::std::path::PathBuf> //io::Result<Box<P>>
+pub fn is_permitted<P>(path: P) -> Result<Option<::std::path::PathBuf>, io::Error>
 where
     P: AsRef<Path>
 {
@@ -104,11 +102,12 @@ pub trait IsPermitted {
     /// the appropriate user, group, admin, root/system-level membership.
     ///
     /// Note: *this does not inspect whether the `Path` is executable.*
-    fn is_permitted(&self) -> Option<::std::path::PathBuf>;
+    fn is_permitted(&self) -> Result<Option<::std::path::PathBuf>, ::std::io::Error>;
 }
 
 #[cfg(unix)]
 mod unix {
+    use Path;
     use std::os::unix::fs::MetadataExt;
     use std::os::unix::fs::PermissionsExt;
 
@@ -116,12 +115,8 @@ mod unix {
     use self::users::{
         group_access_list,
         get_effective_uid,
-        //get_effective_grouplist,
-    };
-    use std::cell::RefCell;
-    use std::path::Path;
-    use std::fs;
-    use std::io;
+    }; 
+    use std::fs; 
     use super::IsExecutable;
     use super::IsPermitted;
 
@@ -135,95 +130,45 @@ mod unix {
             metadata.is_file() && permissions.mode() & 0o111 != 0
         }
     }
-    /*
-    macro_rules! vecomp {
-    [$expr:expr; for $pat:pat in $iter:expr $(; if $cond:expr )?] => {
-        IntoIterator::into_iter($iter)
-            $(
-                .filter(|$pat| $cond)
-            )?
-            .map(|$pat| $expr)
-            .collect::<Vec<_>>()
-        }
-    }
-    */
-    impl IsPermitted for Path {
-        fn is_permitted(&self /* : &Path */) -> Option<::std::path::PathBuf> {
-            // Do an interiorly-mutable borrow on `self`
-            // to give us access to `PathBuf`
 
-            // let mut refc_path: RefCell<Path>  = RefCell::new(*self);
+    /// Could this target path be ran with executable permissions
+    ///  by this runtime's run-level user?
+    ///
+    ///  Suppose the GID for the file in question is (Gm).
+    ///  Assuming that the set of all groups shared by the user, 
+    ///  (G* := { Gn, Gn+1, Gn+2, ...}), is a superset of the set whose only
+    ///  entry is the user's GID, (G_user := G* - Gn).
+    ///  Then, Ǝ a possibility some arbitary GID, like (Gn+14) for example,
+    ///  happens to be the GID belonging to group on that file.
+    ///  
+    ///  In other words, we'll collect each of the (G*) entries
+    ///  and see if there's a match. Otherwise, we check who owns the file and
+    ///  perform a similar check.
+    impl IsPermitted for Path {
+        fn is_permitted(&self) -> Result<Option<::std::path::PathBuf>, ::std::io::Error> {
             let (metadata, buf)  = match self.metadata() {
                 Ok(md) => { (Some(md), self.to_path_buf()) },
-                Err(_) => { (None,     self.to_path_buf()) }
+                Err(e) => { return Err(e) }
             };
             match metadata.unwrap().is_file() {
                 true => { 
                     let file_gid: u32 = fs::metadata(buf.to_str().unwrap()).unwrap().gid();
-                    if let Some(_gid_match) = group_access_list() /* := Result<Vec<Group>> */
-                                              .unwrap()
-                                              .into_iter()
-                                              .take_while(|grp| file_gid != grp.gid())
-                                              .last() {
-                        return Some(buf)
+                    if let Some(_gid_match) = group_access_list()
+                                             .unwrap()
+                                             .into_iter()
+                                             .take_while(|grp| file_gid != grp.gid())
+                                             .last() { return Ok(Some(buf)) }
+                    else if fs::metadata(self.to_str().unwrap())
+                                             .unwrap().uid() == get_effective_uid() {
+                        Ok(Some(buf))
                     }
                     else {
-                        todo!()
+                        Err(::std::io::Error::new(::std::io::ErrorKind::PermissionDenied, "Access denied."))
                     }
                 }
-                false => { None }
+                false => { Err(::std::io::Error::new(::std::io::ErrorKind::NotFound, "Path not found")) }, 
            }
-        }
-            /*
-            if let Ok(metadata) = path_buf.borrow_mut().metadata() {
-                /// If the metadata's mode's octal bits match any
-                /// one of the combinations listed below, then we
-                /// have sufficient reasons to believe it's executable.
-                match metadata.borrow().is_file() {
-                    true => {
-                        /// Could this target path be ran with executable permissions
-                        ///  by this runtime's run-level user?
-                        ///
-                        ///  Suppose the GID for the file in question is (Gm).
-                        ///  Assuming that the set of all groups shared by the user, 
-                        ///  (G* := { Gn, Gn+1, Gn+2, ...}), is a superset of the set whose only
-                        ///  entry is the user's GID, (G_user := G* - Gn).
-                        ///  Then, Ǝ a possibility some arbitary GID, like (Gn+14) for example,
-                        ///  happens to be the GID belonging to group on that file.
-                        ///  
-                        ///  In other words, we'll collect each of the (G*) entries
-                        ///  and see if there's a match. Otherwise, we check who owns the file and
-                        ///  perform a similar check.
-                        if let Some(_arbitrary_gid_matched) = 
-                                vecomp![
-                                    fs::metadata(
-                                        self.borrow()
-                                            .to_str()
-                                            .unwrap()).gid() == Ok(gid);
-                                    for gid in group_access_list()
-                                ].into_iter().take_while(|b| b == false).last() { 
-                            Ok(Box::new(Self))
-                        } else if fs::metadata(self.borrow().to_str().unwrap()).uid()? == Ok(get_effective_uid() as u32) {
-                            /// (It's *really* unusual for this case to occur) 
-                            /// If a terminal operator or script executed 
-                            /// `chmod {1,3,5,7}{2,4,6}{2,4,6} $FILE` (i.e. chmod 720 ~/.bashrc), 
-                            /// the corner case of having owner-exclusive execution rights 
-                            /// without identical group executable permissions is a thing that can happen.
-                            Ok(Box::new(Self))
-                        } else {
-                            io::Error::new(io::ErrorKind::PermissionDenied, "Access Denied")
-                        }
-                         },
-                    false => {
-                        io::Error::new(io::ErrorKind::NotFound,
-                            format!("{:?} was not readable or present on the local filesystem",
-                                self.to_string()))
-                    }
-                }
-            } else {
-                io::Error::new(io::Error::last_os_error()
-            }
-            */
+        } 
     }
 }
 

@@ -86,7 +86,7 @@ pub trait IsExecutable {
 /// current run-level is permitted to execute it.
 ///
 /// See the module documentation for details.
-pub fn is_permitted<P>(path: P) -> Result<Option<::std::path::PathBuf>, io::Error>
+pub fn is_permitted<P>(path: P) -> Result<::std::path::PathBuf, io::Error>
 where
     P: AsRef<Path>
 {
@@ -102,7 +102,7 @@ pub trait IsPermitted {
     /// the appropriate user, group, admin, root/system-level membership.
     ///
     /// Note: *this does not inspect whether the `Path` is executable.*
-    fn is_permitted(&self) -> Result<Option<::std::path::PathBuf>, ::std::io::Error>;
+    fn is_permitted(&self) -> Result<::std::path::PathBuf, ::std::io::Error>;
 }
 
 #[cfg(unix)]
@@ -145,7 +145,7 @@ mod unix {
     ///  and see if there's a match. Otherwise, we check who owns the file and
     ///  perform a similar check.
     impl IsPermitted for Path {
-        fn is_permitted(&self) -> Result<Option<::std::path::PathBuf>, ::std::io::Error> {
+        fn is_permitted(&self) -> Result<::std::path::PathBuf, ::std::io::Error> {
             let (metadata, buf)  = match self.metadata() {
                 Ok(md) => { (Some(md), self.to_path_buf()) },
                 Err(e) => { return Err(e) }
@@ -157,10 +157,10 @@ mod unix {
                                              .unwrap()
                                              .into_iter()
                                              .take_while(|grp| file_gid != grp.gid())
-                                             .last() { return Ok(Some(buf)) }
+                                             .last() { return Ok(buf) }
                     else if fs::metadata(self.to_str().unwrap())
                                              .unwrap().uid() == get_effective_uid() {
-                        Ok(Some(buf))
+                        Ok(buf)
                     }
                     else {
                         Err(::std::io::Error::new(::std::io::ErrorKind::PermissionDenied, "Access denied."))

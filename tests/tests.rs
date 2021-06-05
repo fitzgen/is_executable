@@ -77,9 +77,10 @@ mod unix {
         // `chmod 670 ./tests/i_am_permitted_by_group_membership`
         let path: &str = "./tests/i_am_permitted_by_group_membership";
         {
+            let check = is_permitted(path).ok().unwrap();
             assert_eq!(
-                is_permitted(path),
-                Ok(Some(::std::path::PathBuf::from(path))),
+                check,
+                ::std::path::PathBuf::from(path),
                 "Testing whether the file's GID is in the set of the user's groups" 
             );
         }
@@ -90,9 +91,10 @@ mod unix {
         // `chmod 700 ./tests/i_am_permitted_by_file_ownership`
         let path: &str = "./tests/i_am_permitted_by_file_ownership";
         {
+            let check = is_permitted(path).ok().unwrap();
             assert_eq!(
-                is_permitted(path),
-                Ok(Some(::std::path::PathBuf::from(path))),
+                check,
+                ::std::path::PathBuf::from(path),
                 "Testing whether the file's UID bits exclusively allow owners to execute
                 this file, and that the UID of this user is happens to be the file's owner." 
             );

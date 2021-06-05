@@ -55,8 +55,11 @@ The API comes in two flavors:
 #[cfg(target_os = "windows")]
 extern crate winapi;
 
+use std::io;
 use std::path::Path;
 
+#[cfg(target_os = "unix")]
+use std::os::unix::fs::PermissionsExt;
 /// Returns `true` if there is a file at the given path and it is
 /// executable. Returns `false` otherwise.
 ///
@@ -67,6 +70,8 @@ where
 {
     path.as_ref().is_executable()
 }
+
+
 
 /// An extension trait for `std::fs::Path` providing an `is_executable` method.
 ///
@@ -79,12 +84,45 @@ pub trait IsExecutable {
     fn is_executable(&self) -> bool;
 }
 
+/// Returns `Result<Path, io::Error>` if there is a file at the given path and the
+/// current run-level is permitted to execute it.
+///
+/// See the module documentation for details.
+#[cfg(unix)]
+pub fn is_permitted<P>(path: P) -> Result<::std::path::PathBuf, io::Error>
+where
+    P: AsRef<Path>
+{
+    path.as_ref().is_permitted()
+}
+
+/// An extension trait for `std::fs::Path` providing an `is_permitted` method.
+///
+/// See the module documentation for examples.
+#[cfg(unix)]
+pub trait IsPermitted {
+    /// Returns `Result<Path, io::Error>` that describes if a particular file
+    /// exists at the given path and the run-level of the current context meets
+    /// the appropriate user, group, admin, root/system-level membership.
+    ///
+    /// Note: *this does not inspect whether the `Path` is executable.*
+    fn is_permitted(&self) -> Result<::std::path::PathBuf, ::std::io::Error>;
+}
+
 #[cfg(unix)]
 mod unix {
+    use Path;
+    use std::os::unix::fs::MetadataExt;
     use std::os::unix::fs::PermissionsExt;
-    use std::path::Path;
 
+    extern crate users;
+    use self::users::{
+        group_access_list,
+        get_effective_uid,
+    }; 
+    use std::fs; 
     use super::IsExecutable;
+    use super::IsPermitted;
 
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
@@ -95,6 +133,46 @@ mod unix {
             let permissions = metadata.permissions();
             metadata.is_file() && permissions.mode() & 0o111 != 0
         }
+    }
+
+    /// Could this target path be ran with executable permissions
+    ///  by this runtime's run-level user?
+    ///
+    ///  Suppose the GID for the file in question is (Gm).
+    ///  Assuming that the set of all groups shared by the user, 
+    ///  (G* := { Gn, Gn+1, Gn+2, ...}), is a superset of the set whose only
+    ///  entry is the user's GID, (G_user := G* - Gn).
+    ///  Then, Ǝ a possibility some arbitary GID, like (Gn+14) for example,
+    ///  happens to be the GID belonging to group on that file.
+    ///  
+    ///  In other words, we'll collect each of the (G*) entries
+    ///  and see if there's a match. Otherwise, we check who owns the file and
+    ///  perform a similar check.
+    impl IsPermitted for Path {
+        fn is_permitted(&self) -> Result<::std::path::PathBuf, ::std::io::Error> {
+            let (metadata, buf)  = match self.metadata() {
+                Ok(md) => { (Some(md), self.to_path_buf()) },
+                Err(e) => { return Err(e) }
+            };
+            match metadata.unwrap().is_file() {
+                true => { 
+                    let file_gid: u32 = fs::metadata(buf.to_str().unwrap()).unwrap().gid();
+                    if let Some(_gid_match) = group_access_list()
+                                             .unwrap()
+                                             .into_iter()
+                                             .take_while(|grp| file_gid != grp.gid())
+                                             .last() { return Ok(buf) }
+                    else if fs::metadata(self.to_str().unwrap())
+                                             .unwrap().uid() == get_effective_uid() {
+                        Ok(buf)
+                    }
+                    else {
+                        Err(::std::io::Error::new(::std::io::ErrorKind::PermissionDenied, "Access denied."))
+                    }
+                }
+                false => { Err(::std::io::Error::new(::std::io::ErrorKind::NotFound, "Path not found")) }, 
+           }
+        } 
     }
 }
 

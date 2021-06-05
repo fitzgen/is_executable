@@ -1,7 +1,7 @@
 extern crate diff;
 extern crate is_executable;
 
-use is_executable::is_executable;
+use is_executable::{ is_executable, is_permitted };
 
 #[cfg(unix)]
 mod unix {
@@ -71,6 +71,36 @@ mod unix {
     fn not_executable_directory() {
         assert!(!is_executable("."));
     }
+
+    #[test]
+    fn permitted_by_membership() {
+        // `chmod 670 ./tests/i_am_permitted_by_group_membership`
+        let path: &str = "./tests/i_am_permitted_by_group_membership";
+        {
+            let check = is_permitted(path).ok().unwrap();
+            assert_eq!(
+                check,
+                ::std::path::PathBuf::from(path),
+                "Testing whether the file's GID is in the set of the user's groups" 
+            );
+        }
+    }
+
+    #[test]
+    fn permitted_by_ownership() {
+        // `chmod 700 ./tests/i_am_permitted_by_file_ownership`
+        let path: &str = "./tests/i_am_permitted_by_file_ownership";
+        {
+            let check = is_permitted(path).ok().unwrap();
+            assert_eq!(
+                check,
+                ::std::path::PathBuf::from(path),
+                "Testing whether the file's UID bits exclusively allow owners to execute
+                this file, and that the UID of this user is happens to be the file's owner." 
+            );
+        }
+    }
+
 }
 
 #[cfg(target_os = "windows")]

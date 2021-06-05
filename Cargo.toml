@@ -18,3 +18,6 @@ winapi = { version = "0.3", features = ["winbase"] }
 
 [dev-dependencies]
 diff = "0.1.10"
+
+[dependencies]
+users = "0.11.0"

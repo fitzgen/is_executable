@@ -57,6 +57,8 @@ extern crate winapi;
 
 use std::io;
 use std::path::Path;
+
+#[cfg(target_os = "unix")]
 use std::os::unix::fs::PermissionsExt;
 /// Returns `true` if there is a file at the given path and it is
 /// executable. Returns `false` otherwise.
@@ -86,6 +88,7 @@ pub trait IsExecutable {
 /// current run-level is permitted to execute it.
 ///
 /// See the module documentation for details.
+#[cfg(unix)]
 pub fn is_permitted<P>(path: P) -> Result<::std::path::PathBuf, io::Error>
 where
     P: AsRef<Path>
@@ -96,6 +99,7 @@ where
 /// An extension trait for `std::fs::Path` providing an `is_permitted` method.
 ///
 /// See the module documentation for examples.
+#[cfg(unix)]
 pub trait IsPermitted {
     /// Returns `Result<Path, io::Error>` that describes if a particular file
     /// exists at the given path and the run-level of the current context meets

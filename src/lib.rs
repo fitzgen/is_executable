@@ -117,7 +117,7 @@ mod windows {
                     
                     // Originally taken from:
                     // https://github.com/nushell/nushell/blob/93e8f6c05e1e1187d5b674d6b633deb839c84899/crates/nu-cli/src/completion/command.rs#L64-L74
-                    let pathext = pathext
+                    return pathext
                         .to_string_lossy()
                         .split(';')
                         // Filter out empty tokens and ';' at the end

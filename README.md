@@ -4,14 +4,14 @@
 
 Is there an executable file at the given path?
 
-[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](http://meritbadge.herokuapp.com/is_executable) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![Unix Build Status](https://travis-ci.org/fitzgen/is_executable.png?branch=master)](https://travis-ci.org/fitzgen/is_executable) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/fitzgen/is_executable?branch=master&svg=true)](https://ci.appveyor.com/project/fitzgen/is-executable)
+[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](https://img.shields.io/crates/v/is_executable.svg) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![Unix Build Status](https://travis-ci.org/fitzgen/is_executable.png?branch=master)](https://travis-ci.org/fitzgen/is_executable) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/fitzgen/is_executable?branch=master&svg=true)](https://ci.appveyor.com/project/fitzgen/is-executable)
 
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not
 executable, then `false` is returned. When there is a file and the file is
 executable, then `true` is returned.
 
-This crate works on both unix-based operating systems (mac, linux, freebsd, etc.) and Windows.
+This crate works on both Unix-based operating systems (macOS, Linux, FreeBSD, etc.) and Windows.
 
 The API comes in two flavors:
 

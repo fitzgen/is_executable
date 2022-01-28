@@ -7,6 +7,7 @@ keywords = ["executable", "path", "file", "permissions"]
 license = "Apache-2.0/MIT"
 name = "is_executable"
 readme = "./README.md"
+exclude = ["/appveyor.yml"]
 repository = "https://github.com/fitzgen/is_executable"
 version = "1.0.1"
 

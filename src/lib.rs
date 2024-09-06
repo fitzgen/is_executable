@@ -111,7 +111,7 @@ mod windows {
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
             // First, ensure that the file exists
-            if !self.is_file() {
+            if !self.exists() {
                 return false;
             }
 

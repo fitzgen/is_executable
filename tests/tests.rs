@@ -87,6 +87,11 @@ mod windows {
         assert!(is_executable("./tests/i_am_executable_on_windows.bat"));
     }
 
+    #[test]
+    fn non_existent_correct_extension() {
+        assert!(!is_executable("./tests/non_existent.exe"));
+    }
+
 }
 
 #[test]

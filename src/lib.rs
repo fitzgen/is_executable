@@ -110,6 +110,11 @@ mod windows {
 
     impl IsExecutable for Path {
         fn is_executable(&self) -> bool {
+            // First, ensure that the file exists
+            if !self.exists() {
+                return false;
+            }
+
             // Check using file extension
             if let Some(pathext) = std::env::var_os("PATHEXT") {
                 if let Some(extension) = self.extension() {

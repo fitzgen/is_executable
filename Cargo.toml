@@ -9,7 +9,7 @@ name = "is_executable"
 readme = "./README.md"
 exclude = ["/appveyor.yml"]
 repository = "https://github.com/fitzgen/is_executable"
-version = "1.0.1"
+version = "1.0.2"
 
 [badges.travis-ci]
 repository = "fitzgen/is_executable"

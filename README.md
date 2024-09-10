@@ -1,17 +1,19 @@
-[![Build Status](https://travis-ci.org/fitzgen/is_executable.svg?branch=master)](https://travis-ci.org/fitzgen/is_executable)
-
-# is_executable
+# `is_executable`
 
 Is there an executable file at the given path?
 
-[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](https://img.shields.io/crates/v/is_executable.svg) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![Unix Build Status](https://travis-ci.org/fitzgen/is_executable.png?branch=master)](https://travis-ci.org/fitzgen/is_executable) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/fitzgen/is_executable?branch=master&svg=true)](https://ci.appveyor.com/project/fitzgen/is-executable)
+[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](https://img.shields.io/crates/v/is_executable.svg) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![CI](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml/badge.svg)](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml)
 
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not
 executable, then `false` is returned. When there is a file and the file is
 executable, then `true` is returned.
 
-This crate works on both Unix-based operating systems (macOS, Linux, FreeBSD, etc.) and Windows.
+This crate works on both Unix-based operating systems (macOS, Linux, FreeBSD,
+etc...) and Windows.
+
+Does not help with [time-of-check to time-of use
+(TOCTOU)](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use) races.
 
 The API comes in two flavors:
 
@@ -19,7 +21,6 @@ The API comes in two flavors:
 
     ```rust
     use std::path::Path;
-
     use is_executable::IsExecutable;
 
     fn main() {

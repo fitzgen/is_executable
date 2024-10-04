@@ -118,3 +118,20 @@ mod windows {
         }
     }
 }
+
+// For WASI, we can't check if a file is executable
+// Since wasm and wasi
+//  is not supposed to add executables ideologically,
+// specify them collectively
+#[cfg(any(target_os = "wasi", target_family = "wasm"))]
+mod wasm {
+    use std::path::Path;
+
+    use super::IsExecutable;
+
+    impl IsExecutable for Path {
+        fn is_executable(&self) -> bool {
+            false
+        }
+    }
+}

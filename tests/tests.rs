@@ -46,7 +46,31 @@ mod windows {
     fn non_existent_correct_extension() {
         assert!(!is_executable("./tests/non_existent.exe"));
     }
+}
 
+#[cfg(any(target_os = "wasi", target_family = "wasm"))]
+mod wasm {
+    use super::*;
+
+    #[test]
+    fn executable() {
+        assert!(!is_executable("./tests/i_am_executable"));
+    }
+
+    #[test]
+    fn executable_symlink() {
+        assert!(!is_executable("./tests/i_am_executable_and_symlink"));
+    }
+
+    #[test]
+    fn not_executable_symlink() {
+        assert!(!is_executable("./tests/i_am_not_executable_and_symlink"));
+    }
+
+    #[test]
+    fn not_executable_directory() {
+        assert!(!is_executable("."));
+    }
 }
 
 #[test]

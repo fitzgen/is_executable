@@ -9,10 +9,8 @@ name = "is_executable"
 readme = "./README.md"
 exclude = ["/appveyor.yml"]
 repository = "https://github.com/fitzgen/is_executable"
-version = "1.0.3"
-
-[badges.travis-ci]
-repository = "fitzgen/is_executable"
+version = "1.0.4"
+edition = "2021"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["winbase"] }

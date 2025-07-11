@@ -2,7 +2,7 @@
 
 Is there an executable file at the given path?
 
-[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](https://img.shields.io/crates/v/is_executable.svg) ![](https://img.shields.io/crates/d/is_executable.png)](https://crates.io/crates/is_executable) [![CI](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml/badge.svg)](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml)
+[![](https://docs.rs/is_executable/badge.svg)](https://docs.rs/is_executable/) [![](https://img.shields.io/crates/v/is_executable.svg) ![](https://img.shields.io/crates/d/is_executable.svg)](https://crates.io/crates/is_executable) [![CI](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml/badge.svg)](https://github.com/fitzgen/is_executable/actions/workflows/ci.yml)
 
 A small helper function which determines whether or not the given path points to
 an executable file. If there is no file at the given path, or the file is not

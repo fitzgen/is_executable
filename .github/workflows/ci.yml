@@ -39,12 +39,12 @@ jobs:
       run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
     - name: Install Rust channel
       run: rustup toolchain install stable && rustup default stable
-    - name: Install `cargo wasi`
-      run: cargo install cargo-wasi
-    - name: Install `wasmtime`
+    - name: Install `wasm32-wasip2` target
+      run: rustup target add wasm32-wasip2
+    - name: Install Wasmtime
       run: curl https://wasmtime.dev/install.sh -sSf | bash
-    - name: add `wasmtime` to PATH
+    - name: Add `wasmtime` to `PATH`
       run: echo $HOME/.wasmtime/bin >> $GITHUB_PATH
     - uses: actions/checkout@v4
-    - name: Run `cargo wasi test`
-      run: cargo wasi test --verbose
+    - name: Run Tests
+      run: CARGO_TARGET_WASM32_WASIP2_RUNNER=wasmtime cargo test --target wasm32-wasip2 --verbose

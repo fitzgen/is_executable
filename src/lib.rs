@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(target_os = "windows")]
-extern crate winapi;
+extern crate windows_sys;
 
 use std::path::Path;
 
@@ -51,8 +51,7 @@ mod windows {
     use std::os::windows::ffi::OsStrExt;
     use std::path::Path;
 
-    use winapi::ctypes::{c_ulong, wchar_t};
-    use winapi::um::winbase::GetBinaryTypeW;
+    use windows_sys::Win32::Storage::FileSystem::GetBinaryTypeW;
 
     use super::IsExecutable;
 
@@ -89,11 +88,11 @@ mod windows {
                 .as_os_str()
                 .encode_wide()
                 .chain(Some(0))
-                .collect::<Vec<wchar_t>>();
+                .collect::<Vec<_>>();
             let windows_string_ptr = windows_string.as_ptr();
 
-            let mut binary_type: c_ulong = 42;
-            let binary_type_ptr = &mut binary_type as *mut c_ulong;
+            let mut binary_type: u32 = 42;
+            let binary_type_ptr = &mut binary_type as *mut u32;
 
             let ret = unsafe { GetBinaryTypeW(windows_string_ptr, binary_type_ptr) };
             if binary_type_ptr.is_null() {

@@ -1,6 +1,6 @@
 [package]
 name = "is_executable"
-version = "1.0.5"
+version = "1.0.6"
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
 edition = "2021"
 description = "Is there an executable file at the given path?"
